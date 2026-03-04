@@ -1,7 +1,7 @@
 import { put, head } from "@vercel/blob";
 
 export default async function handler(req, res) {
-  const filename = "portfolio.json";
+  const filename = "Portfolio.json";
 
   if (req.method === "GET") {
     try {
