@@ -1,6 +1,7 @@
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  console.log("🔴 PortfolioProvider MOUNTED"); // ← add this
   const [portfolio, setPortfolio] = useState<Portfolio>(defaultPortfolio);
   const [loading, setLoading] = useState(true);
   // Track if initial load is finished to prevent immediate auto-save
