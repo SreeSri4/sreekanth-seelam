@@ -43,7 +43,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const loadPortfolio = async () => {
       try {
-        const res = await fetch("./portfolio");
+        const res = await fetch("./api/portfolio");
         const data = await res.json();
 
         if (data && data.version) {
@@ -74,7 +74,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
           exportedAt: new Date().toISOString(),
         };
 
-        await fetch("./portfolio", {
+        await fetch("./api/portfolio", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updated),
