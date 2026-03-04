@@ -105,6 +105,16 @@ export default function App() {
     initAuth();
   }, []);
 
+  useEffect(() => {
+  fetch("/api/portfolio")
+    .then(res => res.json())
+    .then(setPortfolio);
+   }, []);
+  await fetch("/api/portfolio", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(updatedPortfolio), 
+  });
   const handleLogin = async () => {
     try {
       await login();
