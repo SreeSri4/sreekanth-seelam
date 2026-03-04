@@ -10,15 +10,9 @@ import StocksETFs from "@/pages/StocksETFs";
 import Transactions from "@/pages/Transactions";
 import { useEffect, useState } from "react";
 
-import {
-  initGoogleAuth,
-  login,
-  readJsonFile,
-} from "./googleDriveService";
-
 export type Theme = "light" | "dark";
 
-// ─── App Content ───────────────────────────────────────────────────────────
+// ─── App Content ─────────────────────────────────────────────
 
 function AppContent({
   theme,
@@ -63,7 +57,7 @@ function AppContent({
   );
 }
 
-// ─── Root App ──────────────────────────────────────────────────────────────
+// ─── Root App ─────────────────────────────────────────────
 
 export default function App() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -72,58 +66,19 @@ export default function App() {
     return "dark";
   });
 
-  // Apply theme to DOM
   useEffect(() => {
     const root = document.documentElement;
 
     if (theme === "dark") {
       root.classList.add("dark");
       root.style.colorScheme = "dark";
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", "#0f172a");
     } else {
       root.classList.remove("dark");
       root.style.colorScheme = "light";
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", "#ffffff");
     }
 
     localStorage.setItem("portfolio-theme", theme);
   }, [theme]);
-
-  // Initialize Google Auth ONCE (not on theme change)
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        await initGoogleAuth();
-        console.log("Google API Ready");
-      } catch (err) {
-        console.error("Google Init Failed:", err);
-      }
-    };
-
-    initAuth();
-  }, []);
-
-  useEffect(() => {
-  fetch("/api/portfolio")
-    .then(res => res.json())
-    .then(setPortfolio);
-   }, []);
-  await fetch("/api/portfolio", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(updatedPortfolio), 
-  });
-  const handleLogin = async () => {
-    try {
-      await login();
-      const data = await readJsonFile("1k6P09jh3MQcNCxuEATfi-G7RhS3uICcM");
-      console.log("Drive Data:", data);
-    } catch (err) {
-      console.error("Drive Error:", err);
-    }
-  };
 
   function toggleTheme() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -133,23 +88,7 @@ export default function App() {
     <PortfolioProvider>
       <AppContent theme={theme} onToggleTheme={toggleTheme} />
 
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          style:
-            theme === "dark"
-              ? {
-                  background: "oklch(0.20 0.025 255)",
-                  border: "1px solid oklch(0.28 0.025 255)",
-                  color: "oklch(0.96 0.005 255)",
-                }
-              : {
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  color: "#0f172a",
-                },
-        }}
-      />
+      <Toaster position="bottom-right" />
     </PortfolioProvider>
   );
 }
