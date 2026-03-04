@@ -27,7 +27,6 @@ const defaultPortfolio: Portfolio = {
   sgbHoldings: [],
   transactions: [],
 };
-
 const PortfolioContext = createContext<PortfolioContextType | undefined>(
   undefined
 );
