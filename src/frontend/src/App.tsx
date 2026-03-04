@@ -87,7 +87,6 @@ export default function App() {
   return (
     <PortfolioProvider>
       <AppContent theme={theme} onToggleTheme={toggleTheme} />
-
       <Toaster position="bottom-right" />
     </PortfolioProvider>
   );
