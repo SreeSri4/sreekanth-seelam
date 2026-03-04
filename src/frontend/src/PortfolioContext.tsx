@@ -1,105 +1,57 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-
-interface Portfolio {
-  version: number;
-  exportedAt: string;
-  mutualFunds: any[];
-  stocks: any[];
-  debtHoldings: any[];
-  npsHoldings: any[];
-  sgbHoldings: any[];
-  transactions: any[];
-}
-
-interface PortfolioContextType {
-  portfolio: Portfolio;
-  setPortfolio: React.Dispatch<React.SetStateAction<Portfolio>>;
-  loading: boolean;
-}
-
-const defaultPortfolio: Portfolio = {
-  version: 1,
-  exportedAt: new Date().toISOString(),
-  mutualFunds: [],
-  stocks: [],
-  debtHoldings: [],
-  npsHoldings: [],
-  sgbHoldings: [],
-  transactions: [],
-};
-const PortfolioContext = createContext<PortfolioContextType | undefined>(
-  undefined
-);
-
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [portfolio, setPortfolio] =
-    useState<Portfolio>(defaultPortfolio);
+  const [portfolio, setPortfolio] = useState<Portfolio>(defaultPortfolio);
   const [loading, setLoading] = useState(true);
+  // Track if initial load is finished to prevent immediate auto-save
+  const isInitialLoad = React.useRef(true);
 
-  // ─── Load Portfolio from Blob ─────────────────────────────
-
+  // 1. Initial Load (GET)
   useEffect(() => {
     const loadPortfolio = async () => {
       try {
         const res = await fetch("/api/portfolio");
+        if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
 
         if (data && data.version) {
           setPortfolio(data);
-        } else {
-          setPortfolio(defaultPortfolio);
         }
       } catch (err) {
-        console.error("Failed to load portfolio:", err);
-        setPortfolio(defaultPortfolio);
+        console.error("Load error:", err);
       } finally {
         setLoading(false);
+        // Mark loading as complete after a short delay to be safe
+        setTimeout(() => { isInitialLoad.current = false; }, 100);
       }
     };
-
     loadPortfolio();
   }, []);
 
-  // ─── Auto Save to Blob ─────────────────────────────────────
-
+  // 2. Auto Save (POST) with Guard
   useEffect(() => {
-    if (loading) return; // prevent saving before initial load
+    // Only save if loading is done AND it's not the initial data mount
+    if (loading || isInitialLoad.current) return;
 
-    const savePortfolio = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
-        const updated = {
-          ...portfolio,
-          exportedAt: new Date().toISOString(),
-        };
-
         await fetch("/api/portfolio", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updated),
+          body: JSON.stringify(portfolio),
         });
+        console.log("Portfolio auto-saved");
       } catch (err) {
-        console.error("Failed to save portfolio:", err);
+        console.error("Save error:", err);
       }
-    };
+    }, 2000); // 2-second debounce
 
-    savePortfolio();
+    return () => clearTimeout(timeoutId);
   }, [portfolio, loading]);
 
   return (
-    <PortfolioContext.Provider
-      value={{ portfolio, setPortfolio, loading }}
-    >
+    <PortfolioContext.Provider value={{ portfolio, setPortfolio, loading }}>
       {children}
     </PortfolioContext.Provider>
   );
-};
-
-export const usePortfolio = () => {
-  const context = useContext(PortfolioContext);
-  if (!context) {
-    throw new Error("usePortfolio must be used within PortfolioProvider");
-  }
-  return context;
 };
