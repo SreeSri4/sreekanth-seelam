@@ -6,11 +6,13 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   // Track if initial load is finished to prevent immediate auto-save
   const isInitialLoad = React.useRef(true);
 
+  const baseUrl = `https://sreekanth-seelam-frontend.vercel.app/`;
+  
   // 1. Initial Load (GET)
   useEffect(() => {
     const loadPortfolio = async () => {
       try {
-        const res = await fetch("/api/portfolio");
+        const res = await fetch(`${baseUrl}/api/portfolio`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
 
@@ -35,7 +37,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const timeoutId = setTimeout(async () => {
       try {
-        await fetch("/api/portfolio", {
+        await fetch(`${baseUrl}/api/portfolio`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(portfolio),
