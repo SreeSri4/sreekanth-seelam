@@ -2,6 +2,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
 let tokenClient: any = null;
+console.log("🔥 NEW Google Drive Service Loaded");
 
 export async function initGoogleAuth(): Promise<void> {
   return new Promise((resolve) => {
