@@ -1,13 +1,12 @@
 import { put, list } from "@vercel/blob";
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const filename = "Portfolio.json";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method === "GET") {
     try {
       const { blobs } = await list();
-      const portfolioBlob = blobs.find((b) => b.pathname === filename);
+      const portfolioBlob = blobs.find((b: any) => b.pathname === filename);
       if (!portfolioBlob) {
         return res.status(404).json({ error: "File not found" });
       }
