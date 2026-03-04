@@ -110,3 +110,22 @@ export default function App() {
     </PortfolioProvider>
   );
 }
+import {
+  initGoogleAuth,
+  login,
+  readJsonFile,
+  updateJsonFile,
+} from "./googleDriveService";
+
+useEffect(() => {
+  initGoogleAuth();
+}, []);
+
+const handleLogin = async () => {
+  await login();
+  const data = await readJsonFile("YOUR_FILE_ID");
+  console.log(data);
+};
+<button onClick={handleLogin}>
+  Connect Google Drive
+</button>
