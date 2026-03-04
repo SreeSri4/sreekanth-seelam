@@ -10,6 +10,12 @@ import StocksETFs from "@/pages/StocksETFs";
 import Transactions from "@/pages/Transactions";
 import { useEffect, useState } from "react";
 
+import {
+  initGoogleAuth,
+  login,
+  readJsonFile,
+} from "./googleDriveService";
+
 export type Theme = "light" | "dark";
 
 // ─── App Content ───────────────────────────────────────────────────────────
@@ -69,6 +75,7 @@ export default function App() {
   // Apply theme to DOM
   useEffect(() => {
     const root = document.documentElement;
+
     if (theme === "dark") {
       root.classList.add("dark");
       root.style.colorScheme = "dark";
@@ -80,8 +87,33 @@ export default function App() {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute("content", "#ffffff");
     }
+
     localStorage.setItem("portfolio-theme", theme);
   }, [theme]);
+
+  // Initialize Google Auth ONCE (not on theme change)
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        await initGoogleAuth();
+        console.log("Google API Ready");
+      } catch (err) {
+        console.error("Google Init Failed:", err);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      await login();
+      const data = await readJsonFile("1k6P09jh3MQcNCxuEATfi-G7RhS3uICcM");
+      console.log("Drive Data:", data);
+    } catch (err) {
+      console.error("Drive Error:", err);
+    }
+  };
 
   function toggleTheme() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -89,7 +121,27 @@ export default function App() {
 
   return (
     <PortfolioProvider>
+      {/* Temporary Test Button */}
+      <button
+        onClick={handleLogin}
+        style={{
+          position: "fixed",
+          top: 20,
+          right: 20,
+          zIndex: 9999,
+          padding: "8px 12px",
+          borderRadius: "6px",
+          background: "#2563eb",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Connect Google Drive
+      </button>
+
       <AppContent theme={theme} onToggleTheme={toggleTheme} />
+
       <Toaster
         position="bottom-right"
         toastOptions={{
@@ -110,31 +162,3 @@ export default function App() {
     </PortfolioProvider>
   );
 }
-import {
-  initGoogleAuth,
-  login,
-  readJsonFile,
-  updateJsonFile,
-} from "./googleDriveService";
-
-useEffect(() => {
-  const loadAuth = async () => {
-    try {
-      await initGoogleAuth();
-      console.log("Google API Ready");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  loadAuth();
-}, []);
-
-const handleLogin = async () => {
-  await login();
-  const data = await readJsonFile("YOUR_FILE_ID");
-  console.log(data);
-};
-<button onClick={handleLogin}>
-  Connect Google Drive
-</button>
