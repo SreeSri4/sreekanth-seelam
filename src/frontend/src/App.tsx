@@ -115,7 +115,7 @@ import {
   login,
   readJsonFile,
   updateJsonFile,
-} from "./googleDriveService";
+} from "src/frontend/googleDriveService.ts";
 
 useEffect(() => {
   initGoogleAuth();
