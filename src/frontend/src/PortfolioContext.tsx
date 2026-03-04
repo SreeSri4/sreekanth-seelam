@@ -1,3 +1,6 @@
+"use client" // ← ADD THIS as line 1
+import React, { useState, useEffect } from "react";
+
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
