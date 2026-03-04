@@ -6,7 +6,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   // Track if initial load is finished to prevent immediate auto-save
   const isInitialLoad = React.useRef(true);
 
-  const baseUrl = `https://sreekanth-seelam-frontend.vercel.app/`;
+  const baseUrl = `https://sreekanth-seelam-frontend.vercel.app`;
   
   // 1. Initial Load (GET)
   useEffect(() => {
