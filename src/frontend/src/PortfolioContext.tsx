@@ -6,7 +6,6 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   // Track if initial load is finished to prevent immediate auto-save
   const isInitialLoad = React.useRef(true);
-
     // 1. Initial Load (GET)
   useEffect(() => {
     const loadPortfolio = async () => {
