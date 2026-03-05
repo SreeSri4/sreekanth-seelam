@@ -343,17 +343,33 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   const [isRefreshingSGB, setRefreshingSGB] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
 
-  // ── Blob fetch on mount (only if sessionStorage is empty) ──────────────
+  // ── Blob fetch on mount (only if sessionStorage has no real data) ────────
   const hasFetchedBlob = useRef(false);
+  const blobLoadComplete = useRef(false);
 
   useEffect(() => {
     if (hasFetchedBlob.current) return;
     hasFetchedBlob.current = true;
 
-    // Skip blob fetch if we already have data in this session
-    const hasSession = sessionStorage.getItem(SESSION_KEYS.mutualFunds);
-    if (hasSession) {
+    // Skip blob fetch only if sessionStorage has actual items (not just "[]")
+    const sessionMF = loadFromSession<unknown[]>(SESSION_KEYS.mutualFunds, []);
+    const sessionStocks = loadFromSession<unknown[]>(SESSION_KEYS.stocks, []);
+    const sessionNPS = loadFromSession<unknown[]>(SESSION_KEYS.nps, []);
+    const sessionSGB = loadFromSession<unknown[]>(SESSION_KEYS.sgb, []);
+    const sessionDebt = loadFromSession<unknown[]>(SESSION_KEYS.debt, []);
+    const sessionTxs = loadFromSession<unknown[]>(SESSION_KEYS.transactions, []);
+
+    const hasRealSessionData =
+      sessionMF.length > 0 ||
+      sessionStocks.length > 0 ||
+      sessionNPS.length > 0 ||
+      sessionSGB.length > 0 ||
+      sessionDebt.length > 0 ||
+      sessionTxs.length > 0;
+
+    if (hasRealSessionData) {
       console.log("📦 Using sessionStorage data");
+      blobLoadComplete.current = true;
       return;
     }
 
@@ -372,23 +388,17 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
         if (!payload?.version) return;
 
         const mfs: MutualFundHolding[] = Array.isArray(payload.mutualFunds)
-          ? payload.mutualFunds
-          : [];
+          ? payload.mutualFunds : [];
         const sts: StockHolding[] = Array.isArray(payload.stocks)
-          ? payload.stocks
-          : [];
+          ? payload.stocks : [];
         const dbt: DebtHolding[] = Array.isArray(payload.debtHoldings)
-          ? payload.debtHoldings
-          : [];
+          ? payload.debtHoldings : [];
         const nps: NpsHolding[] = Array.isArray(payload.npsHoldings)
-          ? payload.npsHoldings
-          : [];
+          ? payload.npsHoldings : [];
         const sgb: SgbHolding[] = Array.isArray(payload.sgbHoldings)
-          ? payload.sgbHoldings
-          : [];
+          ? payload.sgbHoldings : [];
         const txs: Transaction[] = Array.isArray(payload.transactions)
-          ? payload.transactions
-          : [];
+          ? payload.transactions : [];
 
         setMutualFunds(mfs);
         setStocks(sts);
@@ -397,13 +407,15 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
         setSgb(sgb);
         setTransactions(txs);
 
-        // Persist to session so refresh doesn't re-fetch
+        // Persist to session so tab refresh doesn't re-fetch
         saveToSession(SESSION_KEYS.mutualFunds, mfs);
         saveToSession(SESSION_KEYS.stocks, sts);
         saveToSession(SESSION_KEYS.debt, dbt);
         saveToSession(SESSION_KEYS.nps, nps);
         saveToSession(SESSION_KEYS.sgb, sgb);
         saveToSession(SESSION_KEYS.transactions, txs);
+
+        blobLoadComplete.current = true; // ← mark complete AFTER data is set
       } catch (err) {
         console.error("❌ Blob load error:", err);
       } finally {
@@ -415,12 +427,13 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   // ── Auto-save to blob on data changes (debounced 2s) ──────────────────
   const isMounted = useRef(false);
   useEffect(() => {
-    // Skip the very first render to avoid overwriting blob with empty state
+    // Skip very first render
     if (!isMounted.current) {
       isMounted.current = true;
       return;
     }
-    // Don't save while we're still loading from blob
+    // CRITICAL: never save until blob has fully loaded — prevents wiping blob with empty state
+    if (!blobLoadComplete.current) return;
     if (isLoadingData) return;
 
     const timeoutId = setTimeout(async () => {
@@ -848,6 +861,7 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
       sessionStorage.removeItem(key);
     }
     hasFetchedBlob.current = false;
+    blobLoadComplete.current = false;
     didMount.current = false;
   }, []);
 
