@@ -63,7 +63,7 @@ export interface DebtHolding {
 
 export interface NpsHolding {
   id: string;
-  pfmId: string; // scheme code used with npsnav.in/api
+  pfmId: string;
   schemeName: string;
   tier: "I" | "II";
   units: number;
@@ -75,9 +75,9 @@ export interface NpsHolding {
 
 export interface SgbHolding {
   id: string;
-  symbol: string; // e.g. "SGBMAR29" - used to fetch live price
-  name: string; // e.g. "SGB Jan 2029"
-  units: number; // grams
+  symbol: string;
+  name: string;
+  units: number;
   issuePricePerGram: number;
   purchaseDate: string;
   maturityDate: string;
@@ -203,7 +203,7 @@ function saveToSession(key: string, value: unknown): void {
   }
 }
 
-// ─── Debt current value helper (mirrors DebtInvestments.tsx logic) ─────────
+// ─── Debt current value helper ─────────────────────────────────────────────
 
 function calcDebtCurrentValueForTotals(h: DebtHolding): number {
   const today = todayStr();
@@ -217,7 +217,7 @@ function calcDebtCurrentValueForTotals(h: DebtHolding): number {
     }
     case "ppf":
     case "epf":
-      return h.currentValue; // user-maintained balance
+      return h.currentValue;
     default:
       return calcSimpleInterest(h.principal, h.interestRate, years);
   }
@@ -246,7 +246,10 @@ function computeTotals(
     (s, h) => s + h.quantity * h.buyPrice,
     0,
   );
-  const etfValue = allEtfs.reduce((s, h) => s + h.quantity * h.currentPrice, 0);
+  const etfValue = allEtfs.reduce(
+    (s, h) => s + h.quantity * h.currentPrice,
+    0,
+  );
   const etfInvested = allEtfs.reduce((s, h) => s + h.quantity * h.buyPrice, 0);
 
   const debtValue = debt.reduce(
@@ -258,7 +261,10 @@ function computeTotals(
   const npsValue = nps.reduce((s, h) => s + h.units * h.currentNAV, 0);
   const npsInvested = nps.reduce((s, h) => s + h.units * h.purchaseNAV, 0);
 
-  const sgbValue = sgb.reduce((s, h) => s + h.units * h.currentPricePerGram, 0);
+  const sgbValue = sgb.reduce(
+    (s, h) => s + h.units * h.currentPricePerGram,
+    0,
+  );
   const sgbInvested = sgb.reduce(
     (s, h) => s + h.units * h.issuePricePerGram,
     0,
@@ -329,13 +335,126 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
     loadFromSession(SESSION_KEYS.transactions, []),
   );
-  const [isLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   const [isRefreshingMF, setRefreshingMF] = useState(false);
   const [isRefreshingStocks, setRefreshingStocks] = useState(false);
   const [isRefreshingNPS, setRefreshingNPS] = useState(false);
   const [isRefreshingSGB, setRefreshingSGB] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
+
+  // ── Blob fetch on mount (only if sessionStorage is empty) ──────────────
+  const hasFetchedBlob = useRef(false);
+
+  useEffect(() => {
+    if (hasFetchedBlob.current) return;
+    hasFetchedBlob.current = true;
+
+    // Skip blob fetch if we already have data in this session
+    const hasSession = sessionStorage.getItem(SESSION_KEYS.mutualFunds);
+    if (hasSession) {
+      console.log("📦 Using sessionStorage data");
+      return;
+    }
+
+    void (async () => {
+      setIsLoadingData(true);
+      try {
+        console.log("🌐 Fetching from blob...");
+        const res = await fetch("/api/portfolio");
+        if (!res.ok) {
+          console.warn("Blob fetch failed:", res.status);
+          return;
+        }
+        const payload = await res.json();
+        console.log("✅ Blob data loaded:", payload);
+
+        if (!payload?.version) return;
+
+        const mfs: MutualFundHolding[] = Array.isArray(payload.mutualFunds)
+          ? payload.mutualFunds
+          : [];
+        const sts: StockHolding[] = Array.isArray(payload.stocks)
+          ? payload.stocks
+          : [];
+        const dbt: DebtHolding[] = Array.isArray(payload.debtHoldings)
+          ? payload.debtHoldings
+          : [];
+        const nps: NpsHolding[] = Array.isArray(payload.npsHoldings)
+          ? payload.npsHoldings
+          : [];
+        const sgb: SgbHolding[] = Array.isArray(payload.sgbHoldings)
+          ? payload.sgbHoldings
+          : [];
+        const txs: Transaction[] = Array.isArray(payload.transactions)
+          ? payload.transactions
+          : [];
+
+        setMutualFunds(mfs);
+        setStocks(sts);
+        setDebt(dbt);
+        setNps(nps);
+        setSgb(sgb);
+        setTransactions(txs);
+
+        // Persist to session so refresh doesn't re-fetch
+        saveToSession(SESSION_KEYS.mutualFunds, mfs);
+        saveToSession(SESSION_KEYS.stocks, sts);
+        saveToSession(SESSION_KEYS.debt, dbt);
+        saveToSession(SESSION_KEYS.nps, nps);
+        saveToSession(SESSION_KEYS.sgb, sgb);
+        saveToSession(SESSION_KEYS.transactions, txs);
+      } catch (err) {
+        console.error("❌ Blob load error:", err);
+      } finally {
+        setIsLoadingData(false);
+      }
+    })();
+  }, []);
+
+  // ── Auto-save to blob on data changes (debounced 2s) ──────────────────
+  const isMounted = useRef(false);
+  useEffect(() => {
+    // Skip the very first render to avoid overwriting blob with empty state
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    // Don't save while we're still loading from blob
+    if (isLoadingData) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        await fetch("/api/portfolio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            mutualFunds,
+            stocks,
+            debtHoldings,
+            npsHoldings,
+            sgbHoldings,
+            transactions,
+          }),
+        });
+        console.log("💾 Auto-saved to blob");
+      } catch (err) {
+        console.error("❌ Blob save error:", err);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    mutualFunds,
+    stocks,
+    debtHoldings,
+    npsHoldings,
+    sgbHoldings,
+    transactions,
+    isLoadingData,
+  ]);
 
   // ── Persist to sessionStorage on state changes ─────────────────────────
   useEffect(() => {
@@ -430,7 +549,11 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   // ── CRUD: Debt ─────────────────────────────────────────────────────────
   const addDebt = useCallback(
     async (holding: Omit<DebtHolding, "id" | "lastUpdated">) => {
-      const h: DebtHolding = { ...holding, id: uid(), lastUpdated: Date.now() };
+      const h: DebtHolding = {
+        ...holding,
+        id: uid(),
+        lastUpdated: Date.now(),
+      };
       setDebt((prev) => [...prev, h]);
     },
     [],
@@ -454,7 +577,11 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   // ── CRUD: NPS ──────────────────────────────────────────────────────────
   const addNps = useCallback(
     async (holding: Omit<NpsHolding, "id" | "lastUpdated">) => {
-      const h: NpsHolding = { ...holding, id: uid(), lastUpdated: Date.now() };
+      const h: NpsHolding = {
+        ...holding,
+        id: uid(),
+        lastUpdated: Date.now(),
+      };
       setNps((prev) => [...prev, h]);
     },
     [],
@@ -478,7 +605,11 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   // ── CRUD: SGB ──────────────────────────────────────────────────────────
   const addSgb = useCallback(
     async (holding: Omit<SgbHolding, "id" | "lastUpdated">) => {
-      const h: SgbHolding = { ...holding, id: uid(), lastUpdated: Date.now() };
+      const h: SgbHolding = {
+        ...holding,
+        id: uid(),
+        lastUpdated: Date.now(),
+      };
       setSgb((prev) => [...prev, h]);
     },
     [],
@@ -515,26 +646,14 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   const npsRef = useRef(npsHoldings);
   const sgbRef = useRef(sgbHoldings);
 
-  useEffect(() => {
-    mfRef.current = mutualFunds;
-  }, [mutualFunds]);
-
-  useEffect(() => {
-    stocksRef.current = stocks;
-  }, [stocks]);
-
-  useEffect(() => {
-    npsRef.current = npsHoldings;
-  }, [npsHoldings]);
-
-  useEffect(() => {
-    sgbRef.current = sgbHoldings;
-  }, [sgbHoldings]);
+  useEffect(() => { mfRef.current = mutualFunds; }, [mutualFunds]);
+  useEffect(() => { stocksRef.current = stocks; }, [stocks]);
+  useEffect(() => { npsRef.current = npsHoldings; }, [npsHoldings]);
+  useEffect(() => { sgbRef.current = sgbHoldings; }, [sgbHoldings]);
 
   const refreshMFPrices = useCallback(async () => {
     setRefreshingMF(true);
     try {
-      // Fetch NAVs sequentially per unique schemeCode to avoid rate-limit issues
       const uniqueSchemeCodes = [
         ...new Set(mfRef.current.map((h) => h.schemeCode)),
       ];
@@ -543,7 +662,6 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
         const nav = await fetchMFNAV(schemeCode);
         if (nav !== null) navMap.set(schemeCode, nav);
       }
-
       const updated = mfRef.current.map((mf) => {
         const nav = navMap.get(mf.schemeCode);
         return nav !== undefined
@@ -551,7 +669,6 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
           : mf;
       });
       setMutualFunds(updated);
-
       const updatedCount = updated.filter(
         (u, i) => u.currentNAV !== mfRef.current[i]?.currentNAV,
       ).length;
@@ -585,14 +702,12 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
   const refreshNPSPrices = useCallback(async () => {
     setRefreshingNPS(true);
     try {
-      // Fetch NAVs sequentially per unique PFM code to avoid CORS rate-limits
       const uniquePfmIds = [...new Set(npsRef.current.map((h) => h.pfmId))];
       const navMap = new Map<string, number>();
       for (const pfmId of uniquePfmIds) {
         const nav = await fetchNPSNav(pfmId);
         if (nav !== null) navMap.set(pfmId, nav);
       }
-
       const updated = npsRef.current.map((h) => {
         const nav = navMap.get(h.pfmId);
         return nav !== undefined
@@ -600,7 +715,6 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
           : h;
       });
       setNps(updated);
-
       const updatedCount = updated.filter(
         (u, i) => u.currentNAV !== npsRef.current[i]?.currentNAV,
       ).length;
@@ -654,17 +768,17 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
     return () => clearInterval(intervalId);
   }, [refreshMFPrices, refreshStockPrices, refreshNPSPrices, refreshSGBPrices]);
 
-  // ── Export all data as JSON download ──────────────────────────────────
+  // ── Export all data as JSON download ───────────────────────────────────
   const exportData = useCallback(() => {
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      mutualFunds: mutualFunds,
-      stocks: stocks,
-      debtHoldings: debtHoldings,
-      npsHoldings: npsHoldings,
-      sgbHoldings: sgbHoldings,
-      transactions: transactions,
+      mutualFunds,
+      stocks,
+      debtHoldings,
+      npsHoldings,
+      sgbHoldings,
+      transactions,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
@@ -678,14 +792,7 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Portfolio data exported successfully.");
-  }, [
-    mutualFunds,
-    stocks,
-    debtHoldings,
-    npsHoldings,
-    sgbHoldings,
-    transactions,
-  ]);
+  }, [mutualFunds, stocks, debtHoldings, npsHoldings, sgbHoldings, transactions]);
 
   // ── Import data from JSON string ───────────────────────────────────────
   const importData = useCallback((jsonString: string): boolean => {
@@ -695,23 +802,17 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
         throw new Error("Invalid format");
 
       const mfs: MutualFundHolding[] = Array.isArray(payload.mutualFunds)
-        ? payload.mutualFunds
-        : [];
+        ? payload.mutualFunds : [];
       const sts: StockHolding[] = Array.isArray(payload.stocks)
-        ? payload.stocks
-        : [];
+        ? payload.stocks : [];
       const dbt: DebtHolding[] = Array.isArray(payload.debtHoldings)
-        ? payload.debtHoldings
-        : [];
+        ? payload.debtHoldings : [];
       const nps: NpsHolding[] = Array.isArray(payload.npsHoldings)
-        ? payload.npsHoldings
-        : [];
+        ? payload.npsHoldings : [];
       const sgb: SgbHolding[] = Array.isArray(payload.sgbHoldings)
-        ? payload.sgbHoldings
-        : [];
+        ? payload.sgbHoldings : [];
       const txs: Transaction[] = Array.isArray(payload.transactions)
-        ? payload.transactions
-        : [];
+        ? payload.transactions : [];
 
       setMutualFunds(mfs);
       setStocks(sts);
@@ -746,6 +847,7 @@ export function PortfolioProvider({ children }: PortfolioProviderProps) {
     for (const key of Object.values(SESSION_KEYS)) {
       sessionStorage.removeItem(key);
     }
+    hasFetchedBlob.current = false;
     didMount.current = false;
   }, []);
 
