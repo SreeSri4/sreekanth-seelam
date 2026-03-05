@@ -20,6 +20,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <PasscodeGate>
       <App />
-    </PasscodeGate>PasscodeGate>
+    </PasscodeGate>
   </QueryClientProvider>,
 );
