@@ -835,7 +835,7 @@ export default function StocksETFs() {
     refreshStockPrices,
     totals,
   } = usePortfolio();
-  const [activeTab, setActiveTab] = useState<"stock" | "etf">("stock");
+  const [activeTab, setActiveTab] = useState<"stock" | "etf">("etf");
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StockHolding | null>(null);
   const [addBuyTarget, setAddBuyTarget] = useState<{
