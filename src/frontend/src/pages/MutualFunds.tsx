@@ -41,6 +41,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import MFCapAllocation from "@/components/MFCapAllocation";
+import MFProjection from "@/components/MFProjection";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -670,6 +671,7 @@ export default function MutualFunds() {
           </Card>
         ))}
       </div>
+      <MFProjection />
       <MFCapAllocation />
       {/* Holdings Table */}
       <Card className="bg-card border-border shadow-card">
