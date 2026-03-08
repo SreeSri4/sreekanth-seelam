@@ -14,7 +14,7 @@ function classifyFund(schemeName: string): CapType {
   if (
     name.includes("large cap") || name.includes("largecap") ||
     name.includes("bluechip") || name.includes("blue chip") ||
-    name.includes("top 100") || name.includes("nifty 50") ||
+    name.includes("top 100") || name.includes("nifty 50") || name.includes("nifty50") || 
     name.includes("sensex")
   ) return "Large Cap";
   if (
