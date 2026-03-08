@@ -1,7 +1,7 @@
 import { usePortfolio, type MutualFundHolding } from "@/context/PortfolioContext";
 import { formatINR, formatPercent } from "@/utils/format";
 import { useMemo, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Sector, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer, Sector } from "recharts";
 
 // ─── Cap Classification ────────────────────────────────────────────────────
 
@@ -176,10 +176,6 @@ export default function MFCapAllocation() {
                     <Cell key={entry.name} fill={entry.color} opacity={0.9} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value: number) => [formatINR(value), "Value"]}
-                  contentStyle={{ background: "var(--sidebar)", border: "1px solid var(--sidebar-border)", borderRadius: 8, fontSize: 12 }}
-                />
               </PieChart>
             </ResponsiveContainer>
           </div>
