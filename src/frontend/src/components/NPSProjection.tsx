@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
-const TARGET_YEAR = 2050;
+const TARGET_YEAR = 2036;
 const RATES = [
   { label: "10%", rate: 0.10, color: "oklch(0.62 0.18 162)", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.25)"  },
   { label: "15%", rate: 0.15, color: "oklch(0.76 0.15 80)",  bg: "rgba(234,179,8,0.10)",  border: "rgba(234,179,8,0.25)"  },
@@ -194,7 +194,7 @@ export default function NPSProjection({ holdings }: Props) {
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-3">
             Scheme-wise projections at {selectedRate.label} XIRR
           </p>
-          <div style={{ height: Math.max(180, chartData.length * 52) }}>
+          <div className="text-muted-foreground" style={{ height: Math.max(180, chartData.length * 52) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -202,18 +202,18 @@ export default function NPSProjection({ holdings }: Props) {
                 margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
                 barCategoryGap="30%"
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--sidebar-border)" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="currentColor" opacity={0.15} />
                 <XAxis
                   type="number"
                   tickFormatter={shortINR}
-                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  tick={{ fontSize: 10, fill: "currentColor" }}
                   axisLine={false} tickLine={false}
                 />
                 <YAxis
                   type="category"
                   dataKey="name"
                   width={150}
-                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  tick={{ fontSize: 10, fill: "currentColor" }}
                   axisLine={false} tickLine={false}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
