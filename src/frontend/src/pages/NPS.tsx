@@ -586,7 +586,7 @@ export default function NPS() {
 
       {/* ── Projection ──────────────────────────────────────────────────── */}
       <CollapsibleSection
-        title="Projected Value by 2036"
+        title="Projected Value by 2050"
         subtitle="At 10%, 15% and 20% XIRR"
       >
         <NPSProjection holdings={npsHoldings} />
