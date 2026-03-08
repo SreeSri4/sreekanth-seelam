@@ -153,19 +153,6 @@ export default function MFCapAllocation() {
   const activeCap = hoveredCap ?? (chartData[activeIndex]?.name as CapType);
 
   return (
-    <div className="rounded-xl border border-sidebar-border bg-sidebar overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-sidebar-border flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-sm text-foreground">MF Cap Allocation</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">By market capitalisation</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">Total MF Value</p>
-          <p className="text-sm font-bold text-foreground">{formatINR(totalValue)}</p>
-        </div>
-      </div>
-
       <div className="p-5 flex flex-col gap-5">
         {/* Chart + Legend */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -287,6 +274,5 @@ export default function MFCapAllocation() {
           </div>
         )}
       </div>
-    </div>
   );
 }
