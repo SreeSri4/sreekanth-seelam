@@ -446,6 +446,7 @@ export default function MutualFunds() {
       {/* ── Holdings ────────────────────────────────────────────────────── */}
       <CollapsibleSection
         title="Holdings"
+        defaultOpen={true}
         subtitle={`${groups.length} fund${groups.length !== 1 ? "s" : ""} · ${mutualFunds.length} transaction${mutualFunds.length !== 1 ? "s" : ""}`}
         headerRight={
           <div className="flex items-center gap-2">
