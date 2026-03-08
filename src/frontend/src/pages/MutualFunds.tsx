@@ -40,6 +40,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import MFCapAllocation from "@/components/MFCapAllocation";
+
+<MFCapAllocation />
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
