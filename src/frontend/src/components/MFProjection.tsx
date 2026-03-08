@@ -115,35 +115,6 @@ export default function MFProjection() {
   const totalGain      = totalProjected - totalInvested;
 
   return (
-    <div className="rounded-xl border border-sidebar-border bg-sidebar overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-sidebar-border flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-sm text-foreground">Projected Value by {TARGET_YEAR}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Based on current value · {years.toFixed(1)} years remaining
-          </p>
-        </div>
-        {/* Rate selector */}
-        <div className="flex items-center gap-1.5 bg-background border border-sidebar-border rounded-lg p-1">
-          {RATES.map((r, i) => (
-            <button
-              key={r.label}
-              type="button"
-              onClick={() => setActiveRate(i)}
-              className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              style={
-                activeRate === i
-                  ? { background: r.color, color: "#fff" }
-                  : { color: "var(--muted-foreground)" }
-              }
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="p-5 flex flex-col gap-5">
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-3">
@@ -304,6 +275,5 @@ export default function MFProjection() {
           Projections assume current value compounds at selected XIRR. Not financial advice.
         </p>
       </div>
-    </div>
   );
 }
