@@ -42,8 +42,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import MFCapAllocation from "@/components/MFCapAllocation";
 
-<MFCapAllocation />
-
 // ─── Types ────────────────────────────────────────────────────────────────
 
 interface FundGroup {
@@ -672,7 +670,7 @@ export default function MutualFunds() {
           </Card>
         ))}
       </div>
-
+      <MFCapAllocation />
       {/* Holdings Table */}
       <Card className="bg-card border-border shadow-card">
         <CardHeader className="pb-2">
