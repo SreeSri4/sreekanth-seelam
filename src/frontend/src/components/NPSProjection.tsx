@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
-const TARGET_YEAR = 2036;
+const TARGET_YEAR = 2050;
 const RATES = [
   { label: "10%", rate: 0.10, color: "oklch(0.62 0.18 162)", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.25)"  },
   { label: "15%", rate: 0.15, color: "oklch(0.76 0.15 80)",  bg: "rgba(234,179,8,0.10)",  border: "rgba(234,179,8,0.25)"  },
