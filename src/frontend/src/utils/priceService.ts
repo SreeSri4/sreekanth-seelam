@@ -178,110 +178,48 @@ export async function fetchSGBPrice(symbol: string): Promise<number | null> {
  *   RELIANCE.BO     → @BSE:RELIANCE   (legacy Yahoo-style .BO)
  *   AAPL            → AAPL            (US plain symbol – no @ prefix)
  */
-// function toStockAnalysisSymbol(symbol: string): string {
-//   const trimmed = symbol.trim();
+ function toStockAnalysisSymbol(symbol: string): string {
+   const trimmed = symbol.trim();
 
-//   // Already has @ prefix
-//   if (trimmed.startsWith("@")) return trimmed.toUpperCase();
+   // Already has @ prefix
+   if (trimmed.startsWith("@")) return trimmed.toUpperCase();
 
-//   const upper = trimmed.toUpperCase();
+   const upper = trimmed.toUpperCase();
 
-//   // EXCHANGE:TICKER format → @EXCHANGE:TICKER
-//   if (upper.includes(":")) return `@${upper}`;
+   // EXCHANGE:TICKER format → @EXCHANGE:TICKER
+   if (upper.includes(":")) return `@${upper}`;
 
-//   // Legacy Yahoo .NS / .BO suffixes
-//   if (upper.endsWith(".NS")) return `@NSE:${upper.slice(0, -3)}`;
-//   if (upper.endsWith(".BO")) return `@BSE:${upper.slice(0, -3)}`;
+   // Legacy Yahoo .NS / .BO suffixes
+   if (upper.endsWith(".NS")) return `@NSE:${upper.slice(0, -3)}`;
+   if (upper.endsWith(".BO")) return `@BSE:${upper.slice(0, -3)}`;
 
-//   // US or plain symbol – pass through as-is
-//   return upper;
-// }
+   // US or plain symbol – pass through as-is
+   return upper;
+ }
 
 /**
  * Fetch current stock/ETF price directly from stockanalysis.com (browser fetch, no proxy).
  * API: GET https://stockanalysis.com/api/quotes/prices?s=@NSE:SYMBOL
  * Response: { data: [{ price: number, ... }] }
  */
-// export async function fetchStockPrice(symbol: string): Promise<number | null> {
-//   try {
-//     const saSymbol = toStockAnalysisSymbol(symbol);
-//     const url = `https://stockanalysis.com/api/quotes/prices?s=${encodeURIComponent(saSymbol)}`;
-//     const res = await fetch(url, {
-//       signal: AbortSignal.timeout(15000),
-//       headers: {
-//         Accept: "application/json",
-//       },
-//     });
-//     if (!res.ok) return null;
-//     const json = await res.json();
-//     // Response: { data: [{ price: number, ... }] }
-//     const price = (json as { data?: Array<{ price?: number }> })?.data?.[0]
-//       ?.price;
-//     if (typeof price === "number" && price > 0) return price;
-//     return null;
-//   } catch {
-//     return null;
-//   }
-// }
-function toNSESymbol(symbol: string): string {
-  const trimmed = symbol.trim();
-
-  // Already has @ prefix
-  if (trimmed.startsWith("@")) return trimmed.toUpperCase();
-
-  const upper = trimmed.toUpperCase();
-
-  // Legacy Yahoo .NS / .BO suffixes
-  if (upper.endsWith(".NS")) return `${upper.slice(0, -3)}`;
-
-  // US or plain symbol – pass through as-is
-  return upper;
-}
-export async function fetchStockPrice(symbol: string): Promise<number | null> {
-  try {
-    // NSE requires a session cookie — first hit the homepage to get one
-    const homeRes = await fetch("https://www.nseindia.com", {
-      signal: AbortSignal.timeout(10000),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-      },
-    });
-
-    const cookies = homeRes.headers.get("set-cookie") ?? "";
-
-    const nseSymbol = toNSESymbol(symbol);
-    const url = `https://www.nseindia.com/api/quote-equity?symbol=${encodeURIComponent(nseSymbol)}`;
-
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(15000),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json",
-        "Accept-Language": "en-US,en;q=0.5",
-        Referer: "https://www.nseindia.com/",
-        Cookie: cookies,
-      },
-    });
-
-    if (!res.ok) return null;
-
-    const json = await res.json();
-
-    // Response: { priceInfo: { lastPrice: number, ... } }
-    const price = (
-      json as { priceInfo?: { lastPrice?: number } }
-    )?.priceInfo?.lastPrice;
-
-    if (typeof price === "number" && price > 0) return price;
-    return null;
-  } catch {
-    return null;
-  }
-}
+ export async function fetchStockPrice(symbol: string): Promise<number | null> {
+   try {
+     const saSymbol = toStockAnalysisSymbol(symbol);
+     const url = `https://stockanalysis.com/api/quotes/prices?s=${encodeURIComponent(saSymbol)}`;
+     const res = await fetch(url, {
+       signal: AbortSignal.timeout(15000),
+       headers: {
+         Accept: "application/json",
+       },
+     });
+     if (!res.ok) return null;
+     const json = await res.json();
+     // Response: { data: [{ price: number, ... }] }
+     const price = (json as { data?: Array<{ price?: number }> })?.data?.[0]
+       ?.price;
+     if (typeof price === "number" && price > 0) return price;
+     return null;
+   } catch {
+     return null;
+   }
+ }
