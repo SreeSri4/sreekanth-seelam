@@ -37,7 +37,6 @@ export async function searchMutualFunds(
     );
     if (!res.ok) return [];
     const json = await res.json();
-    // Response: [{ schemeCode: "120503", schemeName: "..." }]
     if (!Array.isArray(json)) return [];
     return json
       .slice(0, 20)
@@ -53,13 +52,11 @@ export async function searchMutualFunds(
 
 /**
  * Fetch latest NAV for an NPS scheme directly from npsnav.in via a CORS proxy.
- * API: GET https://npsnav.in/api/{pfmId}
- * The endpoint returns a plain number string e.g. "55.074"
  */
 export async function fetchNPSNav(pfmId: string): Promise<number | null> {
   const targetUrl = `https://npsnav.in/api/${encodeURIComponent(pfmId)}`;
 
-  // Strategy 1: allorigins /get endpoint (returns JSON with "contents" field)
+  // Strategy 1: allorigins /get endpoint
   try {
     const res = await fetch(
       `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
@@ -73,9 +70,7 @@ export async function fetchNPSNav(pfmId: string): Promise<number | null> {
         if (!Number.isNaN(nav) && nav > 0) return nav;
       }
     }
-  } catch {
-    // fall through
-  }
+  } catch { /* fall through */ }
 
   // Strategy 2: allorigins /raw endpoint
   try {
@@ -90,9 +85,7 @@ export async function fetchNPSNav(pfmId: string): Promise<number | null> {
         if (!Number.isNaN(nav) && nav > 0) return nav;
       }
     }
-  } catch {
-    // fall through
-  }
+  } catch { /* fall through */ }
 
   // Strategy 3: corsproxy.io
   try {
@@ -107,11 +100,9 @@ export async function fetchNPSNav(pfmId: string): Promise<number | null> {
         if (!Number.isNaN(nav) && nav > 0) return nav;
       }
     }
-  } catch {
-    // fall through
-  }
+  } catch { /* fall through */ }
 
-  // Strategy 4: direct fetch (works if browser allows CORS or in dev mode)
+  // Strategy 4: direct fetch
   try {
     const res = await fetch(targetUrl, { signal: AbortSignal.timeout(10000) });
     if (res.ok) {
@@ -121,17 +112,13 @@ export async function fetchNPSNav(pfmId: string): Promise<number | null> {
         if (!Number.isNaN(nav) && nav > 0) return nav;
       }
     }
-  } catch {
-    // exhausted all strategies
-  }
+  } catch { /* exhausted */ }
 
   return null;
 }
 
 /**
  * Fetch current price for an SGB symbol from the CloudFront SGB JSON.
- * API: GET https://d1rkri6jugbbi2.cloudfront.net/sgb.json
- * Response: { ibjaPrice, marketStatus, issues: [{ symbol, ltp, ... }] }
  */
 export async function fetchSGBPrice(symbol: string): Promise<number | null> {
   try {
@@ -140,7 +127,6 @@ export async function fetchSGBPrice(symbol: string): Promise<number | null> {
     });
     if (!res.ok) return null;
     const json = await res.json();
-    // The actual list is nested under the "issues" key
     const issues: Record<string, unknown>[] = Array.isArray(json)
       ? json
       : Array.isArray(json?.issues)
@@ -152,13 +138,8 @@ export async function fetchSGBPrice(symbol: string): Promise<number | null> {
         item.symbol.toLowerCase() === symbol.toLowerCase(),
     );
     if (!entry) return null;
-    // Primary field is "ltp" (last traded price); fall back to other names
     const rawPrice =
-      entry.ltp ??
-      entry.nav ??
-      entry.price ??
-      entry.currentPrice ??
-      entry.lastPrice;
+      entry.ltp ?? entry.nav ?? entry.price ?? entry.currentPrice ?? entry.lastPrice;
     if (rawPrice === undefined || rawPrice === null) return null;
     const price = Number.parseFloat(String(rawPrice));
     return Number.isNaN(price) ? null : price;
@@ -167,59 +148,68 @@ export async function fetchSGBPrice(symbol: string): Promise<number | null> {
   }
 }
 
-/**
- * Convert a symbol to the @EXCHANGE:TICKER format used by stockanalysis.com.
- *
- * Accepted input formats:
- *   NSE:ICICIBANK   → @NSE:ICICIBANK  (preferred format)
- *   BSE:RELIANCE    → @BSE:RELIANCE
- *   @NSE:ICICIBANK  → @NSE:ICICIBANK  (already has @)
- *   RELIANCE.NS     → @NSE:RELIANCE   (legacy Yahoo-style .NS)
- *   RELIANCE.BO     → @BSE:RELIANCE   (legacy Yahoo-style .BO)
- *   AAPL            → AAPL            (US plain symbol – no @ prefix)
- */
- function toStockAnalysisSymbol(symbol: string): string {
-   const trimmed = symbol.trim();
+// ─── Stock Price ───────────────────────────────────────────────────────────
+//
+// Strategy 1: our own Vercel Python serverless function at /api/stock-price
+//             which runs server-side and handles NSE session cookies without CORS issues.
+// Strategy 2: stockanalysis.com API as fallback (CORS-friendly, no proxy needed)
+//
+// Accepted symbol formats (all normalised server-side):
+//   NSE:ICICIBANK   ICICIBANK.NS   ICICIBANK   @NSE:ICICIBANK
 
-   // Already has @ prefix
-   if (trimmed.startsWith("@")) return trimmed.toUpperCase();
+function toStockAnalysisSymbol(symbol: string): string {
+  const trimmed = symbol.trim();
 
-   const upper = trimmed.toUpperCase();
+  // Already has @ prefix
+  if (trimmed.startsWith("@")) return trimmed.toUpperCase();
 
-   // EXCHANGE:TICKER format → @EXCHANGE:TICKER
-   if (upper.includes(":")) return `@${upper}`;
+  const upper = trimmed.toUpperCase();
 
-   // Legacy Yahoo .NS / .BO suffixes
-   if (upper.endsWith(".NS")) return `@NSE:${upper.slice(0, -3)}`;
-   if (upper.endsWith(".BO")) return `@BSE:${upper.slice(0, -3)}`;
+  // EXCHANGE:TICKER format → @EXCHANGE:TICKER
+  if (upper.includes(":")) return `@${upper}`;
 
-   // US or plain symbol – pass through as-is
-   return upper;
- }
+  // Legacy Yahoo .NS / .BO suffixes
+  if (upper.endsWith(".NS")) return `@NSE:${upper.slice(0, -3)}`;
+  if (upper.endsWith(".BO")) return `@BSE:${upper.slice(0, -3)}`;
+
+  // US or plain symbol – pass through as-is
+  return upper;
+}
 
 /**
- * Fetch current stock/ETF price directly from stockanalysis.com (browser fetch, no proxy).
- * API: GET https://stockanalysis.com/api/quotes/prices?s=@NSE:SYMBOL
- * Response: { data: [{ price: number, ... }] }
+ * Fetch current stock price via our Python serverless function /api/stock-price.
+ * Falls back to stockanalysis.com if the serverless function is unavailable.
  */
- export async function fetchStockPrice(symbol: string): Promise<number | null> {
-   try {
-     const saSymbol = toStockAnalysisSymbol(symbol);
-     const url = `https://stockanalysis.com/api/quotes/prices?s=${encodeURIComponent(saSymbol)}`;
-     const res = await fetch(url, {
-       signal: AbortSignal.timeout(15000),
-       headers: {
-         Accept: "application/json",
-       },
-     });
-     if (!res.ok) return null;
-     const json = await res.json();
-     // Response: { data: [{ price: number, ... }] }
-     const price = (json as { data?: Array<{ price?: number }> })?.data?.[0]
-       ?.price;
-     if (typeof price === "number" && price > 0) return price;
-     return null;
-   } catch {
-     return null;
-   }
- }
+export async function fetchStockPrice(symbol: string): Promise<number | null> {
+  // Strategy 1: our own Python serverless function (NSE server-side, no CORS)
+  try {
+    const res = await fetch(
+      `/api/stock-price?symbol=${encodeURIComponent(symbol)}`,
+      {
+        signal: AbortSignal.timeout(15000),
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (res.ok) {
+      const json = (await res.json()) as { price?: number };
+      if (typeof json.price === "number" && json.price > 0) return json.price;
+    }
+  } catch { /* fall through to stockanalysis fallback */ }
+
+  // Strategy 2: stockanalysis.com fallback (browser fetch, no proxy)
+  try {
+    const saSymbol = toStockAnalysisSymbol(symbol);
+    const url = `https://stockanalysis.com/api/quotes/prices?s=${encodeURIComponent(saSymbol)}`;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const price = (json as { data?: Array<{ price?: number }> })?.data?.[0]?.price;
+      if (typeof price === "number" && price > 0) return price;
+    }
+  } catch { /* exhausted all strategies */ }
+
+  return null;
+}
