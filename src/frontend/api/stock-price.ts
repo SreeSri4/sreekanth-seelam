@@ -66,9 +66,9 @@ async function fetchNSEPrice(symbol: string): Promise<number | null> {
     );
     if (res.ok) {
       const data = (await res.json()) as {
-        priceInfo?: { close?: number };
+        priceInfo?: { lastPrice?: number };
       };
-      const price = data?.priceInfo?.close;
+      const price = data?.priceInfo?.lastPrice;
       if (typeof price === "number" && price > 0) return price;
     }
   } catch { /* fall through */ }
