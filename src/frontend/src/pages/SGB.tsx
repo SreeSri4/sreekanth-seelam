@@ -493,9 +493,9 @@ export default function SGB() {
       <div className="flex items-start gap-2 text-xs text-muted-foreground bg-card border border-border rounded-lg px-4 py-3">
         <Gem className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-400" />
         <span>
-          Live prices are fetched from{" "}
+          Live prices are fetched from NSE via{" "}
           <span className="font-mono text-primary">
-            d1rkri6jugbbi2.cloudfront.net/sgb.json
+            /api/stock-price
           </span>{" "}
           using the SGB Symbol. Click <strong>Refresh Price</strong> to pull the
           latest gold bond prices.
