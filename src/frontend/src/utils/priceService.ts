@@ -122,30 +122,44 @@ export async function fetchNPSNav(pfmId: string): Promise<number | null> {
  */
 export async function fetchSGBPrice(symbol: string): Promise<number | null> {
   try {
-    const res = await fetch("https://d1rkri6jugbbi2.cloudfront.net/sgb.json", {
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const issues: Record<string, unknown>[] = Array.isArray(json)
-      ? json
-      : Array.isArray(json?.issues)
-        ? json.issues
-        : [];
-    const entry = issues.find(
-      (item) =>
-        typeof item.symbol === "string" &&
-        item.symbol.toLowerCase() === symbol.toLowerCase(),
+    const res = await fetch(
+      `/api/stock-price?symbol=${encodeURIComponent(symbol)}`,
+      {
+        signal: AbortSignal.timeout(15000),
+        headers: { Accept: "application/json" },
+      },
     );
-    if (!entry) return null;
-    const rawPrice =
-      entry.ltp ?? entry.nav ?? entry.price ?? entry.currentPrice ?? entry.lastPrice;
-    if (rawPrice === undefined || rawPrice === null) return null;
-    const price = Number.parseFloat(String(rawPrice));
-    return Number.isNaN(price) ? null : price;
+    if (!res.ok) return null;
+    const json = (await res.json()) as { price?: number };
+    return typeof json.price === "number" && json.price > 0 ? json.price : null;
   } catch {
     return null;
   }
+  // try {
+  //   const res = await fetch("https://d1rkri6jugbbi2.cloudfront.net/sgb.json", {
+  //     signal: AbortSignal.timeout(10000),
+  //   });
+  //   if (!res.ok) return null;
+  //   const json = await res.json();
+  //   const issues: Record<string, unknown>[] = Array.isArray(json)
+  //     ? json
+  //     : Array.isArray(json?.issues)
+  //       ? json.issues
+  //       : [];
+  //   const entry = issues.find(
+  //     (item) =>
+  //       typeof item.symbol === "string" &&
+  //       item.symbol.toLowerCase() === symbol.toLowerCase(),
+  //   );
+  //   if (!entry) return null;
+  //   const rawPrice =
+  //     entry.ltp ?? entry.nav ?? entry.price ?? entry.currentPrice ?? entry.lastPrice;
+  //   if (rawPrice === undefined || rawPrice === null) return null;
+  //   const price = Number.parseFloat(String(rawPrice));
+  //   return Number.isNaN(price) ? null : price;
+  // } catch {
+  //   return null;
+  // }
 }
 
 // ─── Stock Price ───────────────────────────────────────────────────────────
